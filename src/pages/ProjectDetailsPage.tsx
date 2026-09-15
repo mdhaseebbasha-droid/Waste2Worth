@@ -19,6 +19,8 @@ import {
   Check,
   Youtube,
   Tv,
+  Loader2,
+  Calendar,
 } from 'lucide-react';
 import { DIYProject, YouTubeSearchResult, YouTubeVideoItem } from '../types/index.ts';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -428,50 +430,174 @@ export const ProjectDetailsPage: React.FC<ProjectDetailsPageProps> = ({
             </div>
           </div>
 
-          {/* YouTube Tutorial */}
-          <div className="rounded-3xl border border-stone-200 bg-white p-6 sm:p-8 shadow-sm">
-            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-stone-100">
-              <div className="h-7 w-7 rounded-lg bg-red-600 text-white flex items-center justify-center">
-                <Youtube className="h-4 w-4" />
+          {/* 🎥 YouTube Tutorials */}
+          <div id="youtube-tutorials-section" className="rounded-3xl border border-stone-200 bg-white p-6 sm:p-8 shadow-sm">
+            <div className="flex items-center justify-between mb-5 pb-3 border-b border-stone-100">
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-xl bg-red-600 text-white flex items-center justify-center shadow-xs">
+                  <Youtube className="h-4 w-4" />
+                </div>
+                <div>
+                  <h2 id="youtube-tutorials-title" className="text-xl font-bold text-stone-900 font-display flex items-center gap-2">
+                    <span>🎥 YouTube Tutorials</span>
+                  </h2>
+                  <p className="text-xs text-stone-500">
+                    Step-by-step video guides and upcycling demonstrations
+                  </p>
+                </div>
               </div>
-              <h2 className="text-xl font-bold text-stone-900 font-display">
-                YouTube Tutorial
-              </h2>
+
+              {/* YouTube Search query badge */}
+              {project.youtubeSearchQuery && (
+                <div className="hidden md:flex items-center gap-1.5 rounded-lg bg-stone-100 px-3 py-1 text-xs text-stone-600 max-w-xs truncate">
+                  <span className="text-stone-400 font-medium">Query:</span>
+                  <span className="font-mono font-semibold truncate">&ldquo;{project.youtubeSearchQuery}&rdquo;</span>
+                </div>
+              )}
             </div>
 
-            <div className="rounded-2xl border border-stone-200 bg-stone-50/80 p-6 sm:p-8 text-center">
-              <div className="h-12 w-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-3">
-                <Youtube className="h-6 w-6" />
+            {/* Content States: Loading | Found Videos | Fallback */}
+            {ytLoading ? (
+              <div id="youtube-loading-state" className="rounded-2xl border border-stone-200 bg-stone-50/70 p-10 sm:p-12 text-center">
+                <Loader2 className="h-8 w-8 animate-spin text-red-600 mx-auto mb-3" />
+                <p className="text-sm font-bold text-stone-800 font-display">
+                  Finding YouTube tutorials...
+                </p>
+                <p className="text-xs text-stone-500 mt-1 max-w-sm mx-auto">
+                  Searching for authentic DIY guides for &ldquo;{project.youtubeSearchQuery}&rdquo;
+                </p>
               </div>
-              <h3 className="text-lg font-bold text-stone-900 font-display">
-                Watch DIY Video Tutorials
-              </h3>
-              <p className="text-xs sm:text-sm text-stone-600 mt-1 max-w-md mx-auto mb-4">
-                Explore real video demonstrations and walkthroughs for this craft on YouTube.
-              </p>
+            ) : ytData && ytData.videos && ytData.videos.length > 0 ? (
+              <div id="youtube-videos-list" className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {ytData.videos.slice(0, 3).map((video, idx) => {
+                    const rawDate = video.publishedAt || video.publishTime;
+                    let displayDate: string | null = null;
+                    if (rawDate) {
+                      try {
+                        const d = new Date(rawDate);
+                        if (!isNaN(d.getTime())) {
+                          displayDate = d.toLocaleDateString(undefined, {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                          });
+                        }
+                      } catch {
+                        // ignore date format error
+                      }
+                    }
 
-              {/* YouTube Search Query */}
-              <div className="inline-flex items-center gap-2 rounded-xl bg-white border border-stone-200 px-3.5 py-1.5 text-xs text-stone-700 mb-6 max-w-full overflow-hidden">
-                <span className="text-stone-400 font-semibold">Search query:</span>
-                <span className="font-mono font-bold truncate">"{project.youtubeSearchQuery}"</span>
-              </div>
+                    return (
+                      <div
+                        key={video.videoId || video.id || idx}
+                        id={`youtube-video-card-${idx}`}
+                        className="group flex flex-col rounded-2xl border border-stone-200 bg-white hover:border-red-200 hover:shadow-md transition-all duration-200 overflow-hidden"
+                      >
+                        {/* Video Thumbnail */}
+                        <div className="relative aspect-video w-full bg-stone-900 overflow-hidden">
+                          <img
+                            src={video.thumbnail}
+                            alt={video.title}
+                            referrerPolicy="no-referrer"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            loading="lazy"
+                          />
+                          <div className="absolute inset-0 bg-stone-950/20 group-hover:bg-stone-950/10 transition-colors flex items-center justify-center">
+                            <div className="h-11 w-11 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:bg-red-600 transition-all">
+                              <Play className="h-4 w-4 fill-white ml-0.5" />
+                            </div>
+                          </div>
+                        </div>
 
-              <div>
-                <a
-                  id="search-youtube-btn"
-                  href={`https://www.youtube.com/results?search_query=${encodeURIComponent(
-                    project.youtubeSearchQuery
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-xl bg-red-600 hover:bg-red-700 text-white px-6 py-3 text-sm font-bold shadow-md shadow-red-900/10 transition"
-                >
-                  <Play className="h-4 w-4 fill-white" />
-                  <span>Search YouTube</span>
-                  <ExternalLink className="h-4 w-4 ml-1" />
-                </a>
+                        {/* Video Details */}
+                        <div className="flex flex-col flex-1 p-4">
+                          <h3
+                            title={video.title}
+                            className="font-bold text-stone-900 text-sm leading-snug line-clamp-2 mb-2 group-hover:text-red-700 transition-colors"
+                          >
+                            {video.title}
+                          </h3>
+
+                          <div className="mt-auto space-y-1 mb-4 text-xs">
+                            <p className="font-semibold text-stone-700 truncate" title={video.channelTitle}>
+                              {video.channelTitle}
+                            </p>
+                            {displayDate && (
+                              <p className="text-[11px] text-stone-400 flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                <span>{displayDate}</span>
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Watch Tutorial Button */}
+                          <a
+                            id={`watch-tutorial-btn-${idx}`}
+                            href={video.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 hover:bg-red-700 text-white py-2.5 px-4 text-xs font-bold shadow-xs hover:shadow-md transition"
+                          >
+                            <Play className="h-3.5 w-3.5 fill-white" />
+                            <span>Watch Tutorial</span>
+                            <ExternalLink className="h-3 w-3 ml-0.5 opacity-80" />
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Direct Link to YouTube for more results */}
+                <div className="flex items-center justify-between pt-2 px-1">
+                  <span className="text-xs text-stone-500">
+                    Showing {Math.min(3, ytData.videos.length)} verified video tutorials
+                  </span>
+                  <a
+                    id="search-more-youtube-btn"
+                    href={`https://www.youtube.com/results?search_query=${encodeURIComponent(
+                      project.youtubeSearchQuery
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-red-600 hover:text-red-700 transition"
+                  >
+                    <span>Search more videos on YouTube</span>
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                </div>
               </div>
-            </div>
+            ) : (
+              /* Fallback State */
+              <div id="youtube-fallback-state" className="rounded-2xl border border-stone-200 bg-stone-50/80 p-6 sm:p-8 text-center">
+                <div className="h-12 w-12 rounded-2xl bg-stone-100 text-stone-400 flex items-center justify-center mx-auto mb-3">
+                  <Youtube className="h-6 w-6 text-red-600" />
+                </div>
+                <h3 className="text-base font-bold text-stone-900 font-display">
+                  Couldn't load tutorials automatically.
+                </h3>
+                <p className="text-xs text-stone-600 mt-1 max-w-md mx-auto mb-5">
+                  Explore real video demonstrations, walkthroughs, and step-by-step upcycling builds for &ldquo;{project.youtubeSearchQuery}&rdquo; on YouTube.
+                </p>
+
+                <div>
+                  <a
+                    id="search-youtube-btn"
+                    href={`https://www.youtube.com/results?search_query=${encodeURIComponent(
+                      project.youtubeSearchQuery
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-xl bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 text-xs sm:text-sm font-bold shadow-md shadow-red-900/10 transition"
+                  >
+                    <Play className="h-4 w-4 fill-white" />
+                    <span>Search YouTube</span>
+                    <ExternalLink className="h-3.5 w-3.5 ml-1" />
+                  </a>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

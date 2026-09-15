@@ -91,22 +91,42 @@ apiRouter.post('/detect-waste', async (req: Request, res: Response) => {
 });
 
 // Endpoint to search YouTube tutorials
-apiRouter.get('/youtube-search', async (req: Request, res: Response) => {
+// GET /api/youtube/search?q=<search query>
+const handleYouTubeSearch = async (req: Request, res: Response) => {
   try {
     const query = (req.query.q as string) || '';
     if (!query.trim()) {
-      return res.status(400).json({ error: 'Search query "q" is required.' });
+      return res.status(400).json({
+        error: 'YouTube tutorials are temporarily unavailable.',
+        videos: [],
+      });
     }
 
-    const result = await searchYouTubeTutorials(query);
-    return res.json(result);
+    const result = await searchYouTubeTutorials(query.trim());
+
+    if (result.error && result.videos.length === 0) {
+      return res.json({
+        error: 'YouTube tutorials are temporarily unavailable.',
+        videos: [],
+        fallbackUrl: result.fallbackUrl,
+      });
+    }
+
+    return res.json({
+      videos: result.videos,
+      fallbackUrl: result.fallbackUrl,
+    });
   } catch (error: any) {
-    console.error('Error searching YouTube:', error);
+    console.error('Error in YouTube search endpoint:', error?.message || error);
     return res.status(500).json({
-      error: error.message || 'Failed to search YouTube tutorials.',
+      error: 'YouTube tutorials are temporarily unavailable.',
+      videos: [],
     });
   }
-});
+};
+
+apiRouter.get('/youtube/search', handleYouTubeSearch);
+apiRouter.get('/youtube-search', handleYouTubeSearch);
 
 // Explicit JSON 404 handler for any undefined /api routes
 // Guarantees frontend never receives HTML doctype errors for API calls

@@ -10,7 +10,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase.ts';
-import { DIYProject, YouTubeSearchResult, WasteDetectionResponse, DetectedWasteItem } from '../types/index.ts';
+import { DIYProject, YouTubeSearchResult, YouTubeVideoItem, WasteDetectionResponse, DetectedWasteItem } from '../types/index.ts';
 
 const LOCAL_STORAGE_SAVED_KEY = 'waste2worth_guest_saved_projects';
 
@@ -113,17 +113,66 @@ export async function detectWasteAPI(
   return detectWasteFromImagesAPI([{ data: imageBase64, mimeType }]);
 }
 
+// Client-side cache to avoid refetching on React re-renders or navigation
+const youtubeClientCache = new Map<string, { timestamp: number; result: YouTubeSearchResult }>();
+const CLIENT_CACHE_TTL_MS = 20 * 60 * 1000; // 20 minutes
+
 export async function searchYouTubeAPI(query: string): Promise<YouTubeSearchResult> {
-  const response = await fetch(`/api/youtube-search?q=${encodeURIComponent(query)}`);
-  if (!response.ok) {
+  const trimmed = (query || '').trim();
+  const fallbackUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(trimmed)}`;
+
+  if (!trimmed) {
     return {
       available: false,
-      query,
-      fallbackUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
+      query: '',
+      fallbackUrl: 'https://www.youtube.com',
       videos: [],
     };
   }
-  return response.json();
+
+  const cacheKey = trimmed.toLowerCase();
+  const cached = youtubeClientCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CLIENT_CACHE_TTL_MS) {
+    return cached.result;
+  }
+
+  try {
+    const response = await fetch(`/api/youtube/search?q=${encodeURIComponent(trimmed)}`);
+    const data = await response.json().catch(() => null);
+
+    const rawVideos = Array.isArray(data?.videos) ? data.videos : [];
+    const videos: YouTubeVideoItem[] = rawVideos.map((v: any) => ({
+      id: v.videoId || v.id || '',
+      videoId: v.videoId || v.id || '',
+      title: v.title || 'DIY Tutorial',
+      description: v.description || '',
+      channelTitle: v.channelTitle || 'YouTube Creator',
+      thumbnail: v.thumbnail || '',
+      url: v.url || (v.videoId ? `https://www.youtube.com/watch?v=${v.videoId}` : fallbackUrl),
+      publishedAt: v.publishedAt || v.publishTime || '',
+      publishTime: v.publishTime || v.publishedAt || '',
+    }));
+
+    const result: YouTubeSearchResult = {
+      available: videos.length > 0,
+      query: trimmed,
+      fallbackUrl: data?.fallbackUrl || fallbackUrl,
+      videos,
+      error: data?.error,
+    };
+
+    youtubeClientCache.set(cacheKey, { timestamp: Date.now(), result });
+    return result;
+  } catch (err) {
+    console.warn('searchYouTubeAPI error:', err);
+    return {
+      available: false,
+      query: trimmed,
+      fallbackUrl,
+      videos: [],
+      error: 'YouTube tutorials are temporarily unavailable.',
+    };
+  }
 }
 
 // ----------------------------------------------------

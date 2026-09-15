@@ -37,11 +37,14 @@ export interface WasteDetectionResponse {
 }
 
 export interface YouTubeVideoItem {
-  id: string;
+  id?: string;
+  videoId: string;
   title: string;
+  description?: string;
   channelTitle: string;
   thumbnail: string;
   url: string;
+  publishedAt?: string;
   publishTime?: string;
 }
 
