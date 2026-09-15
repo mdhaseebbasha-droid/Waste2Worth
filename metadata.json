@@ -1,0 +1,6 @@
+{
+  "name": "Waste2Worth AI",
+  "description": "Turn your household waste into creative, useful DIY products and decorations using Gemini AI.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

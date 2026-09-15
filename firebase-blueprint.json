@@ -1,0 +1,29 @@
+{
+  "entities": {
+    "UserProfile": {
+      "collection": "users",
+      "fields": {
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "createdAt": { "type": "timestamp" }
+      }
+    },
+    "SavedProject": {
+      "collection": "users/{userId}/savedProjects",
+      "fields": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "wasteUsed": { "type": "array" },
+        "additionalMaterials": { "type": "array" },
+        "tools": { "type": "array" },
+        "difficulty": { "type": "string" },
+        "estimatedTime": { "type": "string" },
+        "steps": { "type": "array" },
+        "safetyTips": { "type": "array" },
+        "youtubeSearchQuery": { "type": "string" },
+        "savedAt": { "type": "timestamp" }
+      }
+    }
+  }
+}
